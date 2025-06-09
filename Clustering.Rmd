@@ -1,0 +1,456 @@
+---
+title: "Clustering"
+author: "Paul Muriithi"
+date: 'Due: 12 June, 2022 (Sunday)'
+output:
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    number_sections: no
+    theme: flatly
+    highlight: haddock
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+subtitle: Machine Learning in Economics
+---
+```{css, echo=FALSE}
+body{
+  background-color: #FAFAFA;
+    font-size: 18px;
+  line-height: 1.8;
+}
+code.r{
+  font-size: 16px;
+}
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.height = 4, fig.width = 5)
+```
+NAME & SURNAME:.....................................
+NO:..............................
+
+**There are 5 questions in this exam, answer all of them. You should work on your own (not in teams). Arrange your answers in an `.Rmd` file (you can use this .Rmd file as a template) and produce a html file containing your answers (your .Rmd must knit into html without any errors). If you have any problems send me an email at huseyin.tastan@gmail.com**
+
+
+--------------------------------------------------------
+
+# Question 1 (20 points) 
+
+## (a)
+
+Consider the following code chunk: 
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse) 
+mpg <- mpg %>% mutate(cyl = factor(cyl))
+mpg %>% group_by(cyl) %>% 
+  summarize(mean_cty = mean(cty), 
+            mean_hwy = mean(hwy)
+  )
+```
+
+Read the help file of the data set using `?mpg` and explain the table above. 
+
+
+### Solution 
+
+Mpg is a dataset containing fuel economy data. cyl is the number of cylinders. The table above contains the average miles per gallon in the city in on the highway. On average, a model with 4-cylinders engine can see the highest miles per gallon(approximately hyw-29. cty-21) both on highway and in the city. The fuel consumprion increases as the number of cylinders increases, where an 8-cylinders engine has the least average miles per gallon on the highway and in the city. The less the cylinders the more fuel economy you will get.
+
+## (b) 
+
+Using `ggplot2` reproduce the following graph exactly: 
+
+Then, put the following title in the plot: "City and Highway miles are positively correlated". Change x axis label to "City miles per gallon" and y axis label to "Highway miles per gallon". Also change the label title to "cylinders" instead of "cyl". (Hint: `geom_jitter()` can be useful).
+
+
+
+### Solution
+
+```{r}
+library(ggplot2)
+ggplot(mpg, aes(x=cty, y=hwy, colour = cyl))+
+  geom_jitter()+
+  scale_x_continuous(breaks = seq(0,30,10))+
+  scale_y_continuous(breaks = seq(0,40,10))+
+  labs(title = "City and Highway miles are positively correlated",
+       x = "City miles per gallon",
+       y = "Highway miles per gallon",
+       colour = "cylinder")+
+  theme_bw()
+```
+
+
+
+--------------------------------------------------------
+
+# Question 2 (20   points) 
+
+The data set `fdata1.RData` contains a tibble named `fdata1` which has 
+510 observations on two variables `V1` and `V2`. First load the data set and 
+then plot the scatter diagram using `ggplot2` library. We want to cluster 
+observations into `k` groups using KNN. Consider k=2,3,4 clusters and run KNN 
+algorithm for each k. Which one returns the lowest total within sum of squares? 
+How many clusters are there? 
+
+## Solution
+
+```{r}
+load("fdata1.RData")
+ggplot(fdata1, aes(V1, V2))+
+  geom_point(color="cornflowerblue", 
+             size = 2, 
+             alpha=.8)+
+  labs(title = "Scatter plot")+
+  theme_bw()
+```
+
+```{r}
+# Determine the # of clusters
+wss <- (nrow(fdata1)-1)*sum(apply(fdata1,2,var))
+for (i in 2:4) wss[i] <- sum(kmeans(fdata1,
+   centers=i)$withinss)
+plot(1:4, wss, type="b", xlab="Number of Clusters",
+  ylab="Within groups sum of squares")
+```
+
+```{r}
+# Total within sum of squares for k=2,3,4
+set.seed(123)
+library(cluster)
+library(gridExtra)
+library(factoextra)
+
+k2=kmeans(fdata1,2)
+k3=kmeans(fdata1,3)
+k4=kmeans(fdata1,4)
+
+print(paste0("k2 total within sum of squares:", round(k2$tot.withinss,2)))
+print(paste0("k3 total within sum of squares:", round(k3$tot.withinss,2)))
+print(paste0("k4 total within sum of squares:", round(k4$tot.withinss,2)))
+print("k4 clusters size:")
+k4$size
+```
+
+k = 4 returns the least total within sum of squares.
+
+There are 4 clusters. The biggest cluster contains 218 observations.
+
+```{r}
+par(mfrow = c(1,1))
+clusplot(fdata1,k4$cluster, col.clus="blue", main="Cluster Mapping",cex=1.2)
+```
+
+
+--------------------------------------------------------
+
+# Question 3 (20   points) 
+
+Use the data set `fdata1` from the previous part. This time apply hierarchical 
+clustering method to assign observations into clusters. Use the following linkage 
+functions: `complete`, `average`, `ward.D2`. Draw the dendrogram 
+and interpret. How many clusters are there?
+
+## Solution
+
+```{r}
+# linkage methods
+lm <- c( "average", "complete", "ward")
+names(lm) <- c( "average", "complete", "ward.D2")
+
+# agglomerative coefficient function
+ac <- function(x) {
+  agnes(fdata1, method = x)$ac
+}
+
+# Find the coefficient for each linkage
+sapply(lm, ac)
+```
+
+Ward.D2 linkage generates the biggest  coefficient, which we'll apply in the hierarchical clustering.
+
+```{r}
+# using Ward's minimum variance to perform hierarchical clustering 
+clust <- agnes(fdata1, method = "ward")
+
+# producing a dendrogram
+pltree(clust, hang = -1, cex = 0.6, main = "Dendrogram")
+```
+
+
+From the dendogram, the values at the bottom represents eaach observation in the data. As we climb up the tree, those observations with similarities are merged into one cluster/branch. The y-axis contains the height of dendrogram where we get the number of clusters. Fron the chart, we can see the clusters lies between 1 and 4, where we have 3 clusters.
+
+```{r}
+#calculating gap statistics for clusters up to 10
+gap_statistics <- clusGap(fdata1, FUN = hcut, K.max = 10, nstart = 25, B = 50)
+
+# plot these clusters agaist their gap statistics
+fviz_gap_stat(gap_statistics)
+```
+
+From the plot, k = 3 clusters produces the largest gap statistic hence our data is grouped into 3 clusters.
+
+```{r}
+# Dissimilarity matrix
+dis <- dist(fdata1, method = "euclidean")
+# Ward.D2 method
+hcl <- hclust(dis, method = "ward.D2" )
+
+# Cut tree into 3 groups
+grps <- cutree(hcl, k = 3)
+
+# Number of members in each cluster
+table(grps)
+```
+
+The first cluster contains 172 observations, the second clusters 234 while in the third cluster we have 114 observations.
+
+
+--------------------------------------------------------
+
+# Question 4 (20   points)
+ 
+
+In this question, we are interested in predicting the direction in the foreign exchange market. To this end, you need to train a model to classify the movements in the USD/TL exchange rate. In several respects, this is similar to the `Smarket` example we saw in chapter 4 (also the exercise 10 in ch.4 that uses `Weekly` data set)
+
+More specifically, we wish to predict the direction (Up or Down) in the USD/TL exchange rate using the last 5 days' exchange rate returns. The data set `finmarkets` contains the following variables: 
+```{r warning=FALSE}
+library(tidyverse) 
+library(caret) 
+load("finmarkets.RData")
+str(finmarkets) 
+```
+ 
+```{r, echo=TRUE, results="hold", warning=FALSE}
+head(finmarkets)
+```
+ 
+The data set covers the period 13/01/2000 - 04/05/2020 and contains 5086 daily observations. `usdret` is today's return in the USD/TL exchange rate and it is defined as the daily percentage change in the USD/TL. `usddirection` is simply the sign of `usdret` and it has two levels: "Down" if `usdret` is negative, and "Up" if `usdret` is positive. The lagged usd returns are `usdretlag1`-`usdretlag5`. The data set also contains daily percentage returns on the BIST100 index, `bistret` and its lags `bistretlag1`-`bistretlag5`.
+
+We first need to determine the train and test sets. For the purposes of this exercise, we will set the test set as years 2017-2018-2019-2020 (partly) and the previous years will be training set. 
+
+```{r}
+finmarkets_train <- finmarkets %>% filter(year<=2016)
+finmarkets_test <- finmarkets %>% filter(year>2016)
+```
+
+Note that the purpose is to successfully classify the direction in the USD/TL market. 
+
+## (a) 
+
+Start by training a logistic regression model in which `usddirection` is the response variable and its lagged returns `usdretlag1` to `usdretlag5` (5 variables) as the predictor set. Do not use any other variable as a predictor. This is your first trained model. 
+
+Evaluate the performance of your model using test data only (`finmarkets_test`) and compute the confusion matrix (`caret` package can be useful).  What is the accuracy rate and error rate in the test data? Is it any better than the no information rate? 
+
+### Solution 
+
+```{r}
+# Logistic Regression
+model1 <- glm(usddirection ~ usdretlag1+usdretlag2+usdretlag3+usdretlag4+usdretlag5, 
+                   data = finmarkets_train, 
+                   family = binomial)
+summary(model1)
+```
+
+The logistic regression summary shows that only the first 2 lags are significant, rest are insiginificant at $5\%$ significance level.
+
+
+```{r}
+# Predict test data based on model
+model1_probabilities <- predict(model1, 
+                       finmarkets_test, type = "response")
+model1.predictions <- ifelse(model1_probabilities > 0.5, "Up", "Down") 
+
+Direction = finmarkets_test$usddirection
+# Confusion matrix
+table(model1.predictions, Direction)
+
+# Model accuracy
+corrects <- mean(model1.predictions == Direction)
+print(paste('Logistic Regression Accuracy =', round(corrects,4)))
+print(paste('Error Rate:', 1-round(corrects,4)))
+```
+
+
+The model model has made 446 correct predictions and 387 incorrect predictions in the test set.
+This gives an accuracy of about $54\%$, meaning that only $54\%$ values has been bredicted correctly.
+
+## (b)
+
+Now, augment your model by adding lagged returns of BIST100, that is, `bistretlag1`-`bistretlag5` (additional 5 variables). This is your second model. Also evaluate this model using test data and compare it to the previous model. Would you use these models in your daily exchange rate transactions and investments? In other words, is it possible to earn money using your preferred model?
+
+### Solution
+```{r}
+# Logistic Regression
+
+# Select the required columns
+cols <- c("usddirection", "bistretlag1", "bistretlag2", "bistretlag3", "bistretlag4", "bistretlag5", "usdretlag1", "usdretlag2", "usdretlag3", "usdretlag4", "usdretlag5")
+
+finmarkets <- finmarkets[, cols]
+finmarkets_train <- finmarkets_train[, cols]
+finmarkets_test <- finmarkets_test[, cols]
+
+# Fit the augmented logistic model
+model2 <- glm(usddirection ~., 
+                   data = finmarkets_train, 
+                   family = binomial)
+summary(model2)
+```
+
+
+After augmenting, this time it is only lag 1 and 2 of BST100 and lag 2 of usdret are significant. This model is slightly better as the AIC has reduced from 5889 to 5471. 
+
+```{r}
+# Predict test data based on model
+model2_probabilities <- predict(model2, 
+                       finmarkets_test, type = "response")
+model2.predictions <- ifelse(model2_probabilities > 0.5, "Up", "Down") 
+
+Direction = finmarkets_test$usddirection
+# Confusion matrix
+table(Direction, model2.predictions)
+
+# Accuracy
+classerr <- mean(model2.predictions == Direction)
+print(paste('Augmented Model Accuracy =', round(classerr,4)))
+```
+
+After evaluating the model, we ca see that the accuracy rate has increased to $61\%$, hence model2 is better. However, this is still not convincing as the error rate is still high at $39\%$ which is not worth the risk of an investment. 
+
+--------------------------------------------------------
+
+# Question 5 (20   points) 
+
+Continue using the data set from the previous question. This time, 
+
+## (a) 
+
+Apply the bagging approach to estimate the classification tree. Evaluate the test performance as usual.  
+Plot the variable importance graph and interpret. 
+
+### Solution
+
+```{r}
+library(rpart)
+library(ipred)
+
+set.seed(1)
+
+#fit the bagging model
+bag <- bagging(
+  usddirection ~ .,
+  data = finmarkets_train,
+  method = "treebag",
+  trControl = trainControl(method = "cv", number = 10),
+  nbagg = 100,   
+  control = rpart.control(minsplit = 2, cp = 0)
+)
+
+#confusion matrix for bagged trees
+
+preds <- predict(bag, finmarkets_test, type="class")
+conf.Matrix <- table(Direction, preds)
+conf.Matrix
+
+# Test performance
+missed_classerr <- mean(preds != Direction)
+print(paste('Bagging Accuracy =', round(1-missed_classerr,4)))
+```
+
+Bagging did not help increase accuacy. The model was only able to predict 0.59 of observations ins in the test data. 
+
+
+```{r fig.width=5, fig.height=5}
+library(vip)
+# variable importance
+VI <- data.frame(variables = names(finmarkets[,-1]),
+                 importance = varImp(bag))
+
+# sort VI ascending
+VI_plot <- VI[order(VI$Overall, decreasing=F),]
+
+# plot the variable importance
+barplot(VI_plot$Overall,
+        names.arg=rownames(VI_plot),
+        xlab='Variable Importance',
+        horiz=TRUE,
+        xaxt = "n",
+        las = 2, cex.lab = 2, font.lab = 1,
+        col='steelblue')
+```
+
+The figure above shows that bistrelag1 and bistretlag2 are the most important features to predict whether the USD/TL "Up" and "Down".
+
+## (b) 
+
+Apply the random forest approach to estimate the decision tree. Evaluate the test performance as usual.  How did you choose the number of variables considered at each split (mtry)?  Plot the variable importance graph and interpret. 
+
+### Solution
+
+```{r}
+set.seed(123)
+library(randomForest)
+
+Rf <- randomForest(
+  usddirection ~ .,
+  data = finmarkets_train,
+  importance = TRUE,
+  mtry=sqrt(ncol(finmarkets_train))-1)
+importance(Rf)
+```
+
+```{r}
+#confusion matrix for RF tree
+rf.preds <- predict(Rf, finmarkets_test, type="class")
+table(Direction, rf.preds)
+
+# Test performance
+missed <- mean(rf.preds != Direction)
+print(paste('Accuracy =', round(1-missed,4)))
+```
+
+
+```{r fig.width=5, fig.height=5}
+# variable importance Plot
+varImpPlot(Rf)
+```
+
+According to the value importance graph, bistretlag1 and bistretlag2 are the two most significant predictors having the largest mean decrease in accuracy rate as well as mean deacrese in Gini.
+
+--------------------------------------------------------
+
+--------------------------------------------------------
+
+
+
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
+
+
+
+
+
+
+
+
+—-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
