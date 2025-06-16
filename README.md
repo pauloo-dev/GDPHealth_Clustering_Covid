@@ -1,12 +1,8 @@
-# GDPHealth_Clustering_Covid
-Data Analysis GDP and Health
+# Analysis of GDP vs Health (GDPHealth_Clustering_Covid)
+### Data Analysis: GDP and Health
 
 
----
-title: "Data Analysis GDP and Health"
-output: pdf_document
-date: '2022-04-16'
----
+
 
 ```R
 library(knitr)
